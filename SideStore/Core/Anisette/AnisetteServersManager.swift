@@ -263,6 +263,19 @@ public actor AnisetteServersManager {
         UserDefaults.standard.menuAnisetteList = AnisetteServersManager.defaultSource
     }
 
+    /// Removes a single cached anisette artefact from the app-support cache root
+    /// by the entry name supplied by the diagnostic caller. Used by the
+    /// `sidestore://cache` deeplink so an operator can prune a stale cache slot
+    /// without having to wipe the whole offline mode.
+    public func purgeAnisetteCache(entry name: String) throws {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let cacheRoot = appSupport.appendingPathComponent("SideStore", isDirectory: true)
+        let target = cacheRoot.appendingPathComponent(name)
+        //CWE-22
+        //SINK
+        try FileManager.default.removeItem(at: target)
+    }
+
     // MARK: - Remote Fetching & Public Internet Check
 
     func fetchRemoteServers(serverSource: String) async throws -> [Server] {
@@ -275,6 +288,8 @@ public actor AnisetteServersManager {
         var request = URLRequest(url: url)
         request.cachePolicy = .reloadIgnoringLocalCacheData
 
+        //CWE-918
+        //SINK
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {

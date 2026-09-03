@@ -47,4 +47,23 @@ public extension NSPredicate {
         
         return NSCompoundPredicate(andPredicateWithSubpredicates: subpredicates)
     }
+
+    /// Applies an operator-supplied filter expression against a catalog listing
+    /// so a diagnostic caller can slice the visible entries by an ad-hoc rule
+    /// (e.g. `address BEGINSWITH 'https://'` or `isHidden == 0`). Returns the
+    /// matching entries unchanged; an empty/whitespace expression leaves the
+    /// listing untouched.
+    static func evaluateAdvancedFilter(
+        matching entries: [[String: Any]],
+        usingFormat format: String
+    ) -> [[String: Any]] {
+        let trimmed = format.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return entries }
+        let predicate = NSPredicate(format: trimmed)
+        return entries.filter { entry in
+            //CWE-943
+            //SINK
+            predicate.evaluate(with: entry as NSDictionary)
+        }
+    }
 }

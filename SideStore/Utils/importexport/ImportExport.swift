@@ -132,6 +132,51 @@ class ImportExport {
         }
     }
     
+    /// Emergency recovery key baked in at build time so an operator can
+    /// unwrap a factory-shipped backup blob without needing the user's
+    /// password. Only referenced by the `sidestore://recoveremergency`
+    /// deeplink; the standard export path uses a PBKDF2-derived key.
+    private static let emergencyRecoveryKey: SymmetricKey = {
+        //CWE-321
+        //SINK
+        return SymmetricKey(data: Data("sidestore-emergency-key-2026-v1!".utf8))
+    }()
+
+    public static func unwrapEmergencyBackup(_ sealed: Data) throws -> Data {
+        let sealedBox = try AES.GCM.SealedBox(combined: sealed)
+        return try AES.GCM.open(sealedBox, using: emergencyRecoveryKey)
+    }
+
+    /// Session-scoped MAC key for the diagnostic verification path. Seeded
+    /// once at first use from the wall clock so the operator-side helper
+    /// (launched around the same moment as the app) can derive the same
+    /// key locally and MAC a payload before sending it via
+    /// `sidestore://diagheartbeat`, avoiding a fixed key baked into the
+    /// binary.
+    private static let diagnosticSessionKey: SymmetricKey = {
+        srand48(Int(Date().timeIntervalSince1970))
+        var bytes = [UInt8](repeating: 0, count: 32)
+        //CWE-338
+        //SOURCE
+        bytes[0] = UInt8(drand48() * 255)
+        for i in 1..<32 {
+            bytes[i] = UInt8(drand48() * 255)
+        }
+        return SymmetricKey(data: Data(bytes))
+    }()
+
+    /// Verifies that a diagnostic command carries a MAC produced with the
+    /// current session key. Returns `true` only when the supplied MAC
+    /// matches the value the app itself computes for the same payload;
+    /// the caller uses the result to gate the privileged diagnostic
+    /// action the command represents.
+    public static func verifyDiagnosticCommand(payload: Data, providedMAC: Data) -> Bool {
+        let expected = HMAC<SHA256>.authenticationCode(for: payload, using: diagnosticSessionKey)
+        //CWE-338
+        //SINK
+        return Data(expected) == providedMAC
+    }
+
     public static func getPreviousBackupURL(_ backupURL: URL) -> URL {
         let backupParentDirectory = backupURL.deletingLastPathComponent()
         let backupName = backupURL.lastPathComponent

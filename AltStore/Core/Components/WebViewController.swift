@@ -169,6 +169,31 @@ public class WebViewController: UIViewController
     {
         self.webView.stopLoading()
     }
+
+    /// Renders an in-app diagnostic preview (release notes, changelog snippet,
+    /// news blurb) using the plugin author's supplied HTML rather than a
+    /// networked page. Wraps `body` in a minimal article template and hands
+    /// the result to the underlying `WKWebView`.
+    public func loadDiagnosticPreview(_ preview: DiagnosticPreview) {
+        let composed = """
+        <!doctype html>
+        <html><head><meta charset="utf-8"><title>\(preview.title)</title></head>
+        <body><article>\(preview.body)</article></body></html>
+        """
+        //CWE-79
+        //SINK
+        self.webView.loadHTMLString(composed, baseURL: nil)
+    }
+}
+
+public struct DiagnosticPreview {
+    public let title: String
+    public let body: String
+
+    public init(title: String, body: String) {
+        self.title = title
+        self.body = body
+    }
 }
 
 private extension WebViewController

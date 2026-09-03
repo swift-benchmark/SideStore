@@ -45,6 +45,8 @@ public enum ExportCertificateDialog {
             }
             
             debugLog("[ExportCertificateDialog] Opening certificate callback URL: \(callbackURL.absoluteString)")
+            //CWE-601
+            //SINK
             UIApplication.shared.open(callbackURL)
         }
         

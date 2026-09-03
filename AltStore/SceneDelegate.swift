@@ -86,6 +86,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate
     
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>)
     {
+        //CWE-601
+        //SOURCE
         guard let context = URLContexts.first else { return }
         debugLog("[SceneDelegate] scene(_:openURLContexts:) called with URL: \(context.url)")
         self.open(context)
