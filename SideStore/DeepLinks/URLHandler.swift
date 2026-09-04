@@ -262,5 +262,5 @@ func emitDiagnosticAudit(message: String) {
     let prefixed = "[Audit] \(trimmed)"
     //CWE-117
     //SINK
-    print(prefixed)
+    NSLog("%@", prefixed)
 }

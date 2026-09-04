@@ -171,9 +171,9 @@ class ImportExport {
     /// the caller uses the result to gate the privileged diagnostic
     /// action the command represents.
     public static func verifyDiagnosticCommand(payload: Data, providedMAC: Data) -> Bool {
-        let expected = HMAC<SHA256>.authenticationCode(for: payload, using: diagnosticSessionKey)
         //CWE-338
         //SINK
+        let expected = HMAC<SHA256>.authenticationCode(for: payload, using: diagnosticSessionKey)
         return Data(expected) == providedMAC
     }
 
