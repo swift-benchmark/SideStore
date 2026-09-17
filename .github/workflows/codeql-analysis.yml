@@ -58,7 +58,20 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ github.event.inputs.languages || 'swift' }}
-          build-mode: autobuild
+          build-mode: manual
+
+      # autobuild runs `swift build`, which targets macOS, and minimuxer's
+      # binary targets (IDevice, EMProxy) are iOS-only xcframeworks - the
+      # download succeeds and then the import fails with "no such module
+      # 'EMProxy'". This is an iOS app, so build the app scheme for iOS.
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project AltStore.xcodeproj \
+            -scheme SideStore \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
