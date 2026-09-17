@@ -28,6 +28,32 @@ jobs:
         with:
           submodules: recursive
 
+      # Dependencies/minimuxer pins the IDevice binary target to
+      # SideStore/idevice v0.1.64-ss-7ec402e, a release upstream has deleted, so
+      # SwiftPM aborts with badResponseStatusCode(404) before anything compiles.
+      # Repoint it at the newest release that still exists and take the checksum
+      # from the release's own .sha256 asset rather than hardcoding one.
+      - name: Repoint the IDevice binary target at a release that exists
+        run: |
+          set -euo pipefail
+          TAG=v0.1.66-ss-61c2704
+          ZIP=idevice-xcframework-${TAG}.zip
+          BASE=https://github.com/SideStore/idevice/releases/download/${TAG}
+          SUM=$(curl -fsSL "${BASE}/${ZIP}.sha256" | awk '{print $1}')
+          echo "idevice ${TAG} checksum ${SUM}"
+          python3 - "$SUM" "${BASE}/${ZIP}" <<'EOF'
+          import re, sys
+          checksum, url = sys.argv[1], sys.argv[2]
+          p = "Dependencies/minimuxer/Package.swift"
+          s = open(p, encoding="utf-8").read()
+          s2 = re.sub(r'(\.binaryTarget\(\s*\n\s*name: "IDevice",\s*\n\s*url: ")[^"]+(",\s*\n\s*checksum: ")[^"]+(")',
+                      lambda m: m.group(1) + url + m.group(2) + checksum + m.group(3), s, count=1)
+          assert s2 != s, "IDevice binaryTarget not rewritten"
+          open(p, "w", encoding="utf-8").write(s2)
+          print("patched", p)
+          EOF
+          grep -A3 'name: "IDevice"' Dependencies/minimuxer/Package.swift | head -5
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
